@@ -81,6 +81,33 @@ const FileSearch = () => {
     }, 300);
   };
 
+  const handleDownload = async (fileName) => {
+  try {
+    // const encodedFileName = encodeURIComponent(fileName);
+    const res = await fetch(`http://localhost:8080/api/files/download?key=${fileName}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) throw new Error('Network response was not ok');
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName; // this will set the downloaded file name
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    console.error('Failed to download file:', err);
+  }
+};
+
+
+
+
   const getFileIcon = (fileName) => {
     if (fileName.includes('jpg') ||fileName.includes('png')) return <Image className="w-5 h-5" />;
     if (fileName.includes('pdf') || fileName.includes('doc') || fileName.includes('ppt')) return <FileText className="w-5 h-5" />;
@@ -210,7 +237,8 @@ const FileSearch = () => {
                   <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors">
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors">
+                  <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors"
+                  onClick={() => handleDownload(file.fileUrl)}>
                     <Download className="w-4 h-4" />
                   </button>
                 </div>
