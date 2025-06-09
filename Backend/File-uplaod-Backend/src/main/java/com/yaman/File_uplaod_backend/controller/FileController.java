@@ -2,17 +2,32 @@ package com.yaman.File_uplaod_backend.controller;
 
 
 
+import com.amazonaws.HttpMethod;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.yaman.File_uplaod_backend.model.FileEntity;
 import com.yaman.File_uplaod_backend.model.User;
 import com.yaman.File_uplaod_backend.repository.UserRepository;
 import com.yaman.File_uplaod_backend.service.FileService;
+import com.yaman.File_uplaod_backend.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -22,6 +37,13 @@ import java.util.List;
 public class FileController {
 
     private final FileService fileService;
+
+    private final S3Service s3Service;
+
+    private final AmazonS3 amazonS3;
+
+    @Value("${aws.s3.bucket-name}")
+    private String bucketName;
 
     @Autowired
     private UserRepository userRepository;
@@ -68,5 +90,32 @@ public class FileController {
         }
         return ResponseEntity.ok(file);
     }
+
+    @GetMapping("/generate-presigned-url")
+    public ResponseEntity<String> generatePresignedUrl(@RequestParam String fileName) {
+
+        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, fileName)
+                .withMethod(HttpMethod.GET)
+                .withExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 5)); // 5 minutes
+
+        URL url = amazonS3.generatePresignedUrl(request);
+        return ResponseEntity.ok(url.toString());
+    }
+
+    @GetMapping("/download")
+    public ResponseEntity<InputStreamResource> downloadFile(@RequestParam String key) throws IOException {
+//        String decodedKey = URLDecoder.decode(key, StandardCharsets.UTF_8);
+//        System.out.println("Decoded Key: [" + decodedKey.trim() + "]");
+
+//        String safeFilename = decodedKey.replaceAll("[\\r\\n\"]", "_");
+
+        S3ObjectInputStream s3InputStream = s3Service.downloadFile(key.trim());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + key + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(new InputStreamResource(s3InputStream));
+    }
+
 }
 

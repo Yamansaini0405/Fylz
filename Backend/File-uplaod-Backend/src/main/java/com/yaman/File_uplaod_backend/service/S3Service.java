@@ -20,11 +20,12 @@ public class S3Service {
 
     private final AmazonS3 amazonS3;
 
-    @Value("${aws.s3.bucket-name}")
-    private String bucketName;
+
+    private final String bucketName = "file-uplaods";
 
     public String uploadFile(MultipartFile file) throws IOException {
         String uniqueFilename = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        System.out.println(uniqueFilename);
 
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentType(file.getContentType());
@@ -37,7 +38,9 @@ public class S3Service {
     }
 
     public S3ObjectInputStream downloadFile(String key) {
+
         S3Object object = amazonS3.getObject(bucketName, key);
+        System.out.println(object.getObjectContent());
         return object.getObjectContent();
     }
 
