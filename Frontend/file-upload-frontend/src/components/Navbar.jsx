@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 export default function Navbar() {
     const {logout} = useAuth();
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 rounded-2xl">
+    <nav className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 rounded-b-3xl">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         
         <div className="flex items-center space-x-2">

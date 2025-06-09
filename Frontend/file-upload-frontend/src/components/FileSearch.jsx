@@ -81,7 +81,9 @@ const FileSearch = () => {
     }, 300);
   };
 
-  const handleDownload = async (fileName) => {
+  const handleDownload = async (url) => {
+    
+    const fileName = url.substring(url.lastIndexOf('/') + 1);
   try {
     // const encodedFileName = encodeURIComponent(fileName);
     const res = await fetch(`http://localhost:8080/api/files/download?key=${fileName}`, {
@@ -102,6 +104,25 @@ const FileSearch = () => {
     document.body.removeChild(link);
   } catch (err) {
     console.error('Failed to download file:', err);
+  }
+};
+
+const handlePreview = async (url) => {
+  const fileName = url.substring(url.lastIndexOf('/') + 1);
+  try {
+    // const encodedFileName = encodeURIComponent(fileName);
+    const res = await fetch(`http://localhost:8080/api/files/generate-presigned-url?fileName=${fileName}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) throw new Error('Failed to get preview URL');
+
+    const previewUrl = await res.text();
+    window.open(previewUrl, '_blank'); 
+  } catch (err) {
+    console.error('Preview error:', err);
   }
 };
 
@@ -234,7 +255,8 @@ const FileSearch = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors">
+                  <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors"
+                  onClick={() => handlePreview(file.fileUrl)}>
                     <Eye className="w-4 h-4" />
                   </button>
                   <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors"
