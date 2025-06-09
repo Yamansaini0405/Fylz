@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback  } from 'react';
 import { useNavigate,Link } from "react-router-dom";
 import { useAuth } from "./useAuth";
 import axios from "axios";
+import debounce from "lodash.debounce";
 import { Eye, EyeOff, User, Mail, Lock } from 'lucide-react';
 
 function SignupForm({ onToggle }) {
@@ -12,14 +13,34 @@ function SignupForm({ onToggle }) {
     confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [nameStatus, setNameStatus] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+   const checkUsername = useCallback(
+    debounce(async (name) => {
+      if (!name) return;
+      try {
+        const res = await axios.get("http://localhost:8080/api/auth/check-username", {
+          params: { name }
+        });
+        setNameStatus(res.data ? "ok" : "taken");
+      } catch{
+          
+        setNameStatus(null);
+      }
+    }, 400),
+    []
+  );
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+     if (e.target.name === "name") {
+      checkUsername(e.target.value);
+    } 
   };
 
   const handleSubmit = async () => {
@@ -58,7 +79,7 @@ function SignupForm({ onToggle }) {
         
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-medium text-gray-700 block">
-            Full Name
+            Username
           </label>
           <div className="relative">
             <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -73,6 +94,12 @@ function SignupForm({ onToggle }) {
               required
             />
           </div>
+          {nameStatus === "ok" && (
+            <p className="text-xs text-green-600">Username is available ✓</p>
+          )}
+          {nameStatus === "taken" && (
+            <p className="text-xs text-red-600">Username is already taken ✗</p>
+          )}
         </div>
 
         {/* Email Field */}
