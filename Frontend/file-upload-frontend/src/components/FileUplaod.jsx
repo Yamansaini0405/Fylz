@@ -116,7 +116,7 @@ const FileUpload = () => {
 
         {/* Upload Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* File Drop Zone */}
+          {/* File Drop Zone  */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
               dragActive

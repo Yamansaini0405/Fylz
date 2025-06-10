@@ -10,7 +10,7 @@ const FileSearch = () => {
  const [mockFiles, setMockFiles] = useState([])
   const {token} = useAuth();
 
-
+  // fetching all files from DB of current user
   const fetchFiles = async () => {
     try{
         const res = await fetch(`http://localhost:8080/api/files/my-files`,{
@@ -30,6 +30,7 @@ const FileSearch = () => {
     fetchFiles();
   }, []);
 
+  //fetching all files from the DB
   const allFiles = async () => {
     try{
         const allRes = await fetch(`http://localhost:8080/api/files/all`,{
@@ -49,6 +50,7 @@ const FileSearch = () => {
     allFiles();
   }, []);
 
+  //search function
   const handleSearch = (query) => {
     setSearchQuery(query);
     setIsSearching(true);
@@ -81,6 +83,7 @@ const FileSearch = () => {
     }, 300);
   };
 
+  //download function get file from s3 cloud
   const handleDownload = async (url) => {
     
     const fileName = url.substring(url.lastIndexOf('/') + 1);
@@ -98,7 +101,7 @@ const FileSearch = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = fileName; // this will set the downloaded file name
+    link.download = fileName; // to set filename for downloaded file
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
