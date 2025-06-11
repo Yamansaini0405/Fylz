@@ -47,7 +47,7 @@ A Java full-stack web application where users can upload, search, filter, and do
 
 ## 📸 UI Preview
 
-> Add a screenshot here (e.g. of the search dashboard)
+
 1. Signup Page
 
 ![image](https://github.com/user-attachments/assets/1e934597-94ea-43e7-90d1-8f347eef4b7c)
