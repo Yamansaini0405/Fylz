@@ -37,7 +37,7 @@ A Java full-stack web application where users can upload, search, filter, and do
 | Method | Endpoint                    | Description                        |
 |--------|-----------------------------|------------------------------------|
 | POST   | `/api/auth/login`           | Login and receive JWT              |
-| POST   | `/api/auth/register`        | Register a new user                |
+| POST   | `/api/auth/SIGNUP`        | Register a new user                |
 | GET    | `/api/files/my-files`       | Fetch current user's files         |
 | GET    | `/api/files/all`            | Admin/global file list             |
 | POST   | `/api/files/upload`         | Upload a file (multipart + metadata) |
