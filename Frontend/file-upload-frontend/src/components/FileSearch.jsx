@@ -171,7 +171,7 @@ const FileSearch = () => {
     return 'text-purple-600 bg-purple-50';
   };
 
-  const displayFiles = searchQuery ? searchResults : mockFiles.slice(0, 6);
+  const displayFiles = searchQuery ? searchResults.slice(0, 11) : mockFiles.slice(0, 6);
   const isMyFileView = !searchQuery;
 
   return (
