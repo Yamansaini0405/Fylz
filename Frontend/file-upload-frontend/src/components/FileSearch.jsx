@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, File, FileText, Image, Archive, Download, Calendar, Filter, Eye } from 'lucide-react';
+import { Search, File, FileText, Image, Archive, Download, Calendar, Filter, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from './useAuth';
 
 const FileSearch = () => {
@@ -7,23 +7,25 @@ const FileSearch = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [filterType, setFilterType] = useState('all');
- const [mockFiles, setMockFiles] = useState([])
-  const {token} = useAuth();
+  const [mockFiles, setMockFiles] = useState([])
+  const [allFilesList, setAllFilesList] = useState([]);
+
+  const { token } = useAuth();
 
   // fetching all files from DB of current user
   const fetchFiles = async () => {
-    try{
-        const res = await fetch(`http://localhost:8080/api/files/my-files`,{
-            headers: {
-        Authorization: `Bearer ${token}`
-      }
-        });
-        const data = await res.json();
-        setMockFiles(data)
-        console.log(data);
-        
-    } catch(err){
-        console.error('Failed to fetch files', err);
+    try {
+      const res = await fetch(`http://localhost:8080/api/files/my-files`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      setMockFiles(data)
+      console.log(data);
+
+    } catch (err) {
+      console.error('Failed to fetch files', err);
     }
   };
   useEffect(() => {
@@ -32,100 +34,122 @@ const FileSearch = () => {
 
   //fetching all files from the DB
   const allFiles = async () => {
-    try{
-        const allRes = await fetch(`http://localhost:8080/api/files/all`,{
-            headers: {
+  try {
+    const allRes = await fetch(`http://localhost:8080/api/files/all`, {
+      headers: {
         Authorization: `Bearer ${token}`
       }
-        });
-        const all = await allRes.json();
-        setSearchResults(all)
-        console.log(all);
-        
-    } catch(err){
-        console.error('Failed to fetch files', err);
-    }
-  };
+    });
+    const all = await allRes.json();
+    setSearchResults(all);
+    setAllFilesList(all); // keep full copy here
+    console.log(all);
+  } catch (err) {
+    console.error('Failed to fetch files', err);
+  }
+};
+
   useEffect(() => {
     allFiles();
   }, []);
 
   //search function
   const handleSearch = (query) => {
-    setSearchQuery(query);
-    setIsSearching(true);
-    
-    
-    setTimeout(() => {
-      if (query.trim() === '') {
-        setSearchResults([]);
-      } 
-      else {
-        let results = searchResults.filter(file =>
-          file.fileName.toLowerCase().includes(query.toLowerCase()) ||
-          file.uploadedBy.toLowerCase().includes(query.toLowerCase())
-          
-        );
+  setSearchQuery(query);
+  setIsSearching(true);
 
-        // Apply filter
-        if (filterType !== 'all') {
-          results = results.filter(file => {
-            if (filterType === 'documents') return file.fileName.includes('pdf') || file.type.includes('doc') || file.type.includes('ppt');
-            if (filterType === 'images') return file.fileName.includes('jpg')|| file.fileName.includes('png');
-            if (filterType === 'archives') return file.fileName.includes('zip') || file.type.includes('rar');
-            return true;
-          });
-        }
-        
-        setSearchResults(results);
+  setTimeout(() => {
+    if (query.trim() === '') {
+      setSearchResults(allFilesList); // when empty search, show all
+    } else {
+      let results = allFilesList.filter(file =>
+        file.fileName.toLowerCase().includes(query.toLowerCase()) ||
+        file.uploadedBy.toLowerCase().includes(query.toLowerCase())
+      );
+
+      // Apply filter
+      if (filterType !== 'all') {
+        results = results.filter(file => {
+          if (filterType === 'documents') return file.fileName.includes('pdf') || file.type.includes('doc') || file.type.includes('ppt');
+          if (filterType === 'images') return file.fileName.includes('jpg') || file.fileName.includes('png');
+          if (filterType === 'archives') return file.fileName.includes('zip') || file.type.includes('rar');
+          return true;
+        });
       }
-      setIsSearching(false);
-    }, 300);
-  };
+
+      setSearchResults(results);
+    }
+    setIsSearching(false);
+  }, 300);
+};
+
 
   //download function get file from s3 cloud
   const handleDownload = async (url) => {
-    
+
     const fileName = url.substring(url.lastIndexOf('/') + 1);
+    try {
+      // const encodedFileName = encodeURIComponent(fileName);
+      const res = await fetch(`http://localhost:8080/api/files/download?key=${fileName}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error('Network response was not ok');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName; // to set filename for downloaded file
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Failed to download file:', err);
+    }
+  };
+
+  const handlePreview = async (url) => {
+    const fileName = url.substring(url.lastIndexOf('/') + 1);
+    try {
+      // const encodedFileName = encodeURIComponent(fileName);
+      const res = await fetch(`http://localhost:8080/api/files/generate-presigned-url?fileName=${fileName}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error('Failed to get preview URL');
+
+      const previewUrl = await res.text();
+      window.open(previewUrl, '_blank');
+    } catch (err) {
+      console.error('Preview error:', err);
+    }
+  };
+
+  // delete function
+  const handleDelete = async (fileId) => {
   try {
-    // const encodedFileName = encodeURIComponent(fileName);
-    const res = await fetch(`http://localhost:8080/api/files/download?key=${fileName}`, {
+    const res = await fetch(`http://localhost:8080/api/files/delete/${fileId}`, {
+      method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+          Authorization: `Bearer ${token}`
+        }
     });
 
-    if (!res.ok) throw new Error('Network response was not ok');
+    if (!res.ok) throw new Error('Failed to delete file');
 
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName; // to set filename for downloaded file
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Remove deleted file from UI immediately
+    setMockFiles(prev => prev.filter(file => file.id !== fileId));
+    setSearchResults(prev => prev.filter(file => file.id !== fileId));
+
+    alert('File deleted successfully');
   } catch (err) {
-    console.error('Failed to download file:', err);
-  }
-};
-
-const handlePreview = async (url) => {
-  const fileName = url.substring(url.lastIndexOf('/') + 1);
-  try {
-    // const encodedFileName = encodeURIComponent(fileName);
-    const res = await fetch(`http://localhost:8080/api/files/generate-presigned-url?fileName=${fileName}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    if (!res.ok) throw new Error('Failed to get preview URL');
-
-    const previewUrl = await res.text();
-    window.open(previewUrl, '_blank'); 
-  } catch (err) {
-    console.error('Preview error:', err);
+    console.error('Delete error:', err);
+    alert('Failed to delete file');
   }
 };
 
@@ -133,14 +157,14 @@ const handlePreview = async (url) => {
 
 
   const getFileIcon = (fileName) => {
-    if (fileName.includes('jpg') ||fileName.includes('png')) return <Image className="w-5 h-5" />;
+    if (fileName.includes('jpg') || fileName.includes('png')) return <Image className="w-5 h-5" />;
     if (fileName.includes('pdf') || fileName.includes('doc') || fileName.includes('ppt')) return <FileText className="w-5 h-5" />;
     if (fileName.includes('zip') || fileName.includes('rar')) return <Archive className="w-5 h-5" />;
     return <File className="w-5 h-5" />;
   };
 
   const getFileTypeColor = (fileName) => {
-    if (fileName.includes('jpg') || fileName.includes('png') ) return 'text-green-600 bg-green-50';
+    if (fileName.includes('jpg') || fileName.includes('png')) return 'text-green-600 bg-green-50';
     if (fileName.includes('pdf')) return 'text-red-600 bg-red-50';
     if (fileName.includes('doc')) return 'text-blue-600 bg-blue-50';
     if (fileName.includes('zip') || fileName.includes('rar')) return 'text-orange-600 bg-orange-50';
@@ -148,11 +172,12 @@ const handlePreview = async (url) => {
   };
 
   const displayFiles = searchQuery ? searchResults : mockFiles.slice(0, 6);
+  const isMyFileView = !searchQuery;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-4xl">
-        
+
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-white" />
@@ -161,7 +186,7 @@ const handlePreview = async (url) => {
           <p className="text-gray-600">Find your files quickly and efficiently</p>
         </div>
 
-        
+
         <div className="relative mb-6">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="w-5 h-5 text-gray-400" />
@@ -175,7 +200,7 @@ const handlePreview = async (url) => {
           />
         </div>
 
-        
+
         <div className="flex items-center space-x-2 mb-6">
           <Filter className="w-4 h-4 text-gray-600" />
           <span className="text-sm font-medium text-gray-600">Filter:</span>
@@ -192,11 +217,10 @@ const handlePreview = async (url) => {
                   setFilterType(filter.key);
                   if (searchQuery) handleSearch(searchQuery);
                 }}
-                className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                  filterType === filter.key
+                className={`px-3 py-1 text-sm rounded-full transition-colors ${filterType === filter.key
                     ? 'bg-purple-600 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-purple-100'
-                }`}
+                  }`}
               >
                 {filter.label}
               </button>
@@ -204,7 +228,7 @@ const handlePreview = async (url) => {
           </div>
         </div>
 
-        
+
         {isSearching && (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -212,7 +236,7 @@ const handlePreview = async (url) => {
           </div>
         )}
 
-        
+
         {!isSearching && searchQuery && searchResults.length === 0 && (
           <div className="text-center py-12">
             <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -221,7 +245,7 @@ const handlePreview = async (url) => {
           </div>
         )}
 
-        
+
         {!isSearching && displayFiles.length > 0 && (
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
@@ -233,7 +257,7 @@ const handlePreview = async (url) => {
           </div>
         )}
 
-        
+
         {!isSearching && displayFiles.length > 0 && (
           <div className="space-y-3">
             {displayFiles.map((file) => (
@@ -248,7 +272,6 @@ const handlePreview = async (url) => {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-800 truncate">{file.fileName}</p>
                     <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                      
                       <span className="flex items-center">
                         <Calendar className="w-3 h-3 mr-1" />
                         {file.uploadTime}
@@ -258,28 +281,33 @@ const handlePreview = async (url) => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors"
-                  onClick={() => handlePreview(file.fileUrl)}>
-                    <Eye className="w-4 h-4" />
+                  <button onClick={() => handlePreview(file.fileUrl)}>
+                    <Eye className="w-4 h-4 text-purple-600" />
                   </button>
-                  <button className="text-purple-600 hover:text-purple-800 p-2 hover:bg-purple-100 rounded-lg transition-colors"
-                  onClick={() => handleDownload(file.fileUrl)}>
-                    <Download className="w-4 h-4" />
+                  <button onClick={() => handleDownload(file.fileUrl)}>
+                    <Download className="w-4 h-4 text-purple-600" />
                   </button>
+
+                  {/* Show delete button ONLY when not in search mode and the file belongs to user */}
+                  {!searchQuery && (
+                    <button onClick={() => handleDelete(file.id)}>
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        
+
         <div className="mt-8 text-center">
           <button className="text-purple-600 hover:text-purple-800 font-medium text-sm hover:underline">
             Advanced Search Options
           </button>
         </div>
 
-        
+
         <div className="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
           <p>Total files in system: 1,247 • Last updated: 2 minutes ago</p>
         </div>
